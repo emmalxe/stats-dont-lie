@@ -66,14 +66,15 @@ with col1:
     new_home_players = st.text_input("Enter Player Names (comma-separated)", key="home_player_input")
     
     with stylable_container(
-            "home_team",
+            "add_home_team",
             css_styles="""
             button {
                 background-color: #AEC6CF;  /* blue for Home Team */
                 color: black;
+                width: 150px;  /* Set width */
             }""",
         ):
-        if st.button("Add Home"):
+        if st.button("Add Home Players"):
             if new_home_players:
                 player_list = [player.strip() for player in new_home_players.split(",") if player.strip()]
                 # Add only new players to the list
@@ -90,21 +91,23 @@ with col2:
     new_away_players = st.text_input("Enter Player Names (comma-separated)", key="away_player_input")
     
     with stylable_container(
-            "away_team",
+            "add_away_team",
             css_styles="""
             button {
                 background-color: #FF6961;  /* red for away Team */
                 color: black;
+                width: 150px;  /* Set width */
             }""",
         ):
         #Add a player to list
-        if st.button("Add Away"):
+        if st.button("Add Away Players"):
             if new_away_players: 
                 player_list = [player.strip() for player in new_away_players.split(",") if player.strip()]
                 # Add only new players to the list
                 for player in player_list:
                     if player not in st.session_state.away_players:
                         st.session_state.away_players.append(player)
+                    # initialize 
              
                         
 all_players = st.session_state.home_players + st.session_state.away_players
@@ -130,14 +133,10 @@ if (st.session_state.home_players != []) or (st.session_state.away_players != []
                         st.session_state.home_players.remove(player_to_remove)
                     elif player_to_remove in st.session_state.away_players:
                         st.session_state.away_players.remove(player_to_remove)
-
-                  
-                  
+             
 st.divider()
 
-
 # Event Logging
-
 st.subheader("Set number and Start Time")
 
 col1, col2 = st.columns([1,3])
@@ -178,9 +177,6 @@ with stylable_container(
             st.error("Invalid time format! Please enter in HH:MM:SS format.")
             
             
-            
-
-
 st.subheader(f"Event Logging for Set {st.session_state.set_number}")
 
 # event logs buttons
@@ -210,6 +206,7 @@ with col1:
             button {
                 background-color: #FF6961;  /* red for away Team */
                 color: black;
+                width: 100px;
             }""",
         ):
             for player in st.session_state.away_players:
@@ -224,6 +221,7 @@ with col2:
             button {
                 background-color: #D3D3D3;  /* grey for action buttons */
                 color: black;
+                width: 100px;
             }""",
         ):
     
@@ -249,6 +247,7 @@ with col3:
                 button {
                     background-color: #AEC6CF;  /* blue for Home Team */
                     color: black;
+                    width: 100px;
                 }""",
             ):
                 for player in st.session_state.home_players:

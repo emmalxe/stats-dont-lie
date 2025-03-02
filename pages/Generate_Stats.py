@@ -6,7 +6,7 @@ from io import BytesIO
 
 
 #To Do
-# Stats Visualisation
+# Stats Visualisation? 
 
 st.title("Generate Player Stats! 🧐")
 
