@@ -320,9 +320,9 @@ with stylable_container(
 # Score keeper 
 st.subheader("Cumulative Score")
 col, cold, cole = st.columns(3)
-selected_set_for_score = col.number_input("As of this set", min_value=1, max_value=20, value=1, step=1)
-home_score = cold.number_input(f"{st.session_state.home_team}", min_value=0, max_value=20, value=0, step=1)
-away_score = cole.number_input(f"{st.session_state.away_team}", min_value=0, max_value=20, value=0, step=1)
+selected_set_for_score = col.number_input("As of this set", min_value=1, max_value=20, value=1, step=1, key="selected_set_for_score")
+home_score = cold.number_input(f"{st.session_state.home_team}", min_value=0, max_value=20, value=0, step=1, key="home_score")
+away_score = cole.number_input(f"{st.session_state.away_team}", min_value=0, max_value=20, value=0, step=1, key="away_score")
 
 with stylable_container(
     "log_event",
