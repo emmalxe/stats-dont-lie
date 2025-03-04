@@ -5,17 +5,17 @@ import datetime as dt
 from io import BytesIO
 import re
 
-# To Do: 
-# try to make it so that if the person is dead, the button becomes grey, if get caught back then restated. 
+# To Do 2: 
 # can upload your intermediate logs and continue from there? 
 # add remarks button for certain timestamps. 
+# add an undo button --> to undo logs but also undo the button colour changes 
 
 st.title("Stats Dont Lie!☝🏻")
 with st.expander("Instructions"):
     st.write("1. **Enter Team & Player Names** - You can add or remove players at any time without affecting previously saved logs.")
     st.write("2. **Log Set Details** - For each set, record the set number and start time. If you need to update the start time, simply save a new timestamp to override the previous one.")
     st.write("3. **Log Events** - Record key events in each set. To delete a log entry, scroll to the bottom and remove the corresponding row.")
-    st.write("4. **Update Scores** - Adjust the cumulative score at the end of each set. If you need to update the score , simply save a new score to override the previous one.")
+    st.write("4. **Update Scores and Reset Button Colours** - Click the 'Reset' Button to reset the colours of the player buttons. Adjust the cumulative score at the end of each set. If you need to update the score , simply save a new score to override the previous one.")
     st.write("5. **Export & Finalize** - Download your logs as an Excel file, make manual edits if needed, and upload the finalized file on the 'Generate Stats' page to generate player statistics.")
     st.warning("⚠️ Important: If you rerun the page, unsaved data will be lost! Be sure to download your logs! ")
     
@@ -55,14 +55,27 @@ if "log_df" not in st.session_state:
 if "score_time_df" not in st.session_state: 
     st.session_state.score_time_df = pd.DataFrame()
 
+#initialise queues to keep track of who is dead 
+if "home_dead" not in st.session_state: 
+    st.session_state.home_dead = []
+if "away_dead" not in st.session_state: 
+    st.session_state.away_dead = []
+if "success_message" not in st.session_state:
+    st.session_state.success_message = ""
+
+
+
+
 # Input Player Names 
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("Home Team")
     st.session_state.home_team = st.text_input("Home Team Name", value=st.session_state.home_team)
     
+    if st.session_state.home_team == "": 
+        st.session_state.home_team = "Home Team"
+    
     # Input field for adding multiple players
-    #new_home_players = st.text_input("Enter Player Name", key="home_player_input")
     new_home_players = st.text_input("Enter Player Names (comma-separated)", key="home_player_input")
     
     with stylable_container(
@@ -79,14 +92,20 @@ with col1:
                 player_list = [player.strip() for player in new_home_players.split(",") if player.strip()]
                 # Add only new players to the list
                 for player in player_list:
-                    if player not in st.session_state.home_players:
-                        st.session_state.home_players.append(player)
+                    if (player not in st.session_state.home_players) and (player not in st.session_state.home_dead) :
+                        st.session_state.home_players.append(player) #all players 
+                        # st.session_state.home_alive.append(player)
+                        st.session_state.home_dead = []
+                        
+                
                 
                 
 with col2:
     st.subheader("Away Team")
     st.session_state.away_team = st.text_input("Away Team Name", value=st.session_state.away_team)
-    
+    if st.session_state.away_team == "": 
+        st.session_state.away_team = "Away Team"
+        
     # Input field for adding multiple players
     new_away_players = st.text_input("Enter Player Names (comma-separated)", key="away_player_input")
     
@@ -105,12 +124,15 @@ with col2:
                 player_list = [player.strip() for player in new_away_players.split(",") if player.strip()]
                 # Add only new players to the list
                 for player in player_list:
-                    if player not in st.session_state.away_players:
+                    if (player not in st.session_state.away_players) and (player not in st.session_state.away_dead) :
                         st.session_state.away_players.append(player)
-                    # initialize 
+                        #st.session_state.away_alive.append(player)
+                        st.session_state.away_dead = []
              
                         
-all_players = st.session_state.home_players + st.session_state.away_players
+live_players = st.session_state.home_players + st.session_state.away_players
+dead_players = st.session_state.home_dead + st.session_state.away_dead
+all_players = live_players + dead_players
 
 if (st.session_state.home_players != []) or (st.session_state.away_players != []): 
     col1, col2 = st.columns([1,2])
@@ -176,9 +198,11 @@ with stylable_container(
         else: 
             st.error("Invalid time format! Please enter in HH:MM:SS format.")
             
-            
-st.subheader(f"Event Logging for Set {st.session_state.set_number}")
+        
 
+st.subheader(f"Event Logging for Set {st.session_state.set_number}")
+ 
+    
 # event logs buttons
 col1, col2, col3 = st.columns(3)
 
@@ -186,7 +210,6 @@ with col1:
     st.write("Select Player")
     col11, col12 = st.columns(2)
     with col11: 
-        
         with stylable_container(
             "home_team",
             css_styles="""
@@ -195,8 +218,22 @@ with col1:
                 color: black;
             }""",
         ):
+            
             for player in st.session_state.home_players:
-                if st.button(player, key=f"home_{player}"):
+                if st.button(player, key=f"home_{player}_alive"):
+                    st.session_state.selected_player = player
+        
+        with stylable_container(
+            "home_team_dead",
+            css_styles="""
+            button {
+                background-color: #FFFFFF;  /* grey if dead */
+                color: black;
+            }""",
+        ):
+            
+            for player in st.session_state.home_dead:
+                if st.button(player, key=f"home_{player}_dead"):
                     st.session_state.selected_player = player
                 
     with col12:
@@ -210,9 +247,25 @@ with col1:
             }""",
         ):
             for player in st.session_state.away_players:
-                if st.button(player, key=f"away_{player}", ):
+                if st.button(player, key=f"away_{player}_alive", ):
                     st.session_state.selected_player = player
-    st.write(f" **Selected Player:** {st.session_state.selected_player}")
+        
+        with stylable_container(
+            "away_team_dead",
+            css_styles="""
+            button {
+                background-color: #FFFFFF;  /* grey if dead */
+                color: black;
+                width: 100px;
+            }""",
+        ):
+            for player in st.session_state.away_dead:
+                if st.button(player, key=f"away_{player}_dead", ):
+                    st.session_state.selected_player = player
+   
+    st.write(f"**Selected Player:** {st.session_state.selected_player}")
+    
+    
 
 with col2:
     with stylable_container(
@@ -251,7 +304,20 @@ with col3:
                 }""",
             ):
                 for player in st.session_state.home_players:
-                    if st.button(player, key=f"opponent_{player}"):
+                    if st.button(player, key=f"opponent_home_{player}_alive"):
+                        st.session_state.affected_player = player
+            
+            with stylable_container(
+                "home_team_dead",
+                css_styles="""
+                button {
+                    background-color: #FFFFFF;  /* grey for dead*/
+                    color: black;
+                    width: 100px;
+                }""",
+            ):
+                for player in st.session_state.home_dead:
+                    if st.button(player, key=f"opponent_home_{player}_dead"):
                         st.session_state.affected_player = player
         with col22:                
             with stylable_container(
@@ -263,7 +329,19 @@ with col3:
                 }""",
             ):
                 for player in st.session_state.away_players:
-                    if st.button(player, key=f"opponent_{player}"):
+                    if st.button(player, key=f"opponent_away_{player}_alive"):
+                        st.session_state.affected_player = player
+            
+            with stylable_container(
+                "away_team_dead",
+                css_styles="""
+                button {
+                    background-color: #FFFFFF;  /* grey for dead*/
+                    color: black;
+                }""",
+            ):
+                for player in st.session_state.away_dead:
+                    if st.button(player, key=f"opponent_away_{player}_dead"):
                         st.session_state.affected_player = player
                         
         st.write(f"**Affected Player:** {st.session_state.get('affected_player', 'None')}")
@@ -301,6 +379,7 @@ with stylable_container(
             else:
                 affected_team = "Unknown"
 
+
             # Create event dictionary with team information
             event = {
                 "set_number": st.session_state.set_number,
@@ -310,11 +389,92 @@ with stylable_container(
                 "affected_player": affected_player,
                 "affected_team": affected_team  # Track affected player's team
             }
+            
+            # Handle errors: 
+            if event["team"] == event["affected_team"]: 
+                st.error("You have selected players from the same team! Impossible!")
+            
+            elif (event["player"] in dead_players) or (event["affected_player"] in dead_players): 
+                st.error("The player you have selected is already dead! Try again!")
+            
+            else:
+                st.session_state.logs.append(event)
+                st.session_state.success_message = f"Logged: {event['player']} ({event['team']}) {event['action'].lower()} {event['affected_player']} ({event['affected_team']})"
+                if event["action"] == "Kill":
+                    if event["affected_team"] in st.session_state.home_team:
+                        # Remove affected player from the home_alive list
+                        st.session_state.home_players.remove(event["affected_player"])
+                        # Add affected player to the home_dead list
+                        st.session_state.home_dead.append(event["affected_player"])
+                    elif event["affected_team"] in st.session_state.away_team:
+                        # Remove affected player from the home_alive list
+                        st.session_state.away_players.remove(event["affected_player"])
+                        # Add affected player to the home_dead list
+                        st.session_state.away_dead.append(event["affected_player"])
+                
+                elif event["action"] == "Catch":
+                    if event["affected_team"] in st.session_state.home_team:
+                        # Remove affected player from the home_alive list
+                        st.session_state.home_players.remove(event["affected_player"])
+                        # Add affected player to the home_dead list
+                        st.session_state.home_dead.append(event["affected_player"])
+                        
+                        #revive player from away
+                        if  st.session_state.away_dead != []: 
+                            revive = st.session_state.away_dead.pop(0)
+                            # Add the player to away_alive
+                            st.session_state.away_players.append(revive)
+                        
+                    elif event["affected_team"] in st.session_state.away_team:
+                        # Remove affected player from the home_alive list
+                        st.session_state.away_players.remove(event["affected_player"])
+                        # Add affected player to the home_dead list
+                        st.session_state.away_dead.append(event["affected_player"])
+                        
+                        #revive player from home
+                        if  st.session_state.home_dead != []: 
+                            revive = st.session_state.home_dead.pop(0)
+                            # Add the player to home_alive
+                            st.session_state.home_players.append(revive)
+                            
+                else: #if step line 
+                    if event["team"] in st.session_state.home_team:
+                        # Remove affected player from the home_alive list
+                        st.session_state.home_players.remove(event["player"])
+                        # Add affected player to the home_dead list
+                        st.session_state.home_dead.append(event["player"])
+                    else: 
+                        # Remove affected player from the home_alive list
+                        st.session_state.away_players.remove(event["player"])
+                        # Add affected player to the home_dead list
+                        st.session_state.away_dead.append(event["player"])
+                st.rerun()     
+  
+        
+# Display success message after rerun
+if st.session_state.success_message:
+    st.success(st.session_state.success_message)
+    st.session_state.success_message = ""  # Clear message after displaying       
+    
+with stylable_container(
+    "reset",
+    css_styles="""
+    button {
+        background-color: #E6E6FA;  
+        color: black;
+    }""",
+    ):
+    if st.button("Reset"): 
+        for player in st.session_state.home_dead: 
+            st.session_state.home_players.append(player)
+        st.session_state.home_dead = []
+        
+        for player in st.session_state.away_dead: 
+            st.session_state.away_players.append(player)
+        st.session_state.away_dead = []
+        st.rerun()
 
-            # Append the event to the logs
-            st.session_state.logs.append(event)
-            st.success(f"Logged: {event['player']} ({event['team']}) {event['action'].lower()} {event['affected_player']} ({event['affected_team']})")
-
+            
 
 # Score keeper 
 st.subheader("Cumulative Score")
@@ -340,7 +500,7 @@ with stylable_container(
 # Display Logs as Table
 st.subheader("Game Events")
 
-# Convert logs to a DataFrame and display
+# Convert logs to a DataFrame and display (only valid logs)
 if st.session_state.logs:
     log_df = pd.DataFrame(st.session_state.logs)
     st.session_state.log_df = log_df
