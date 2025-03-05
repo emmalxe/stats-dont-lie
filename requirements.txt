@@ -1,0 +1,6 @@
+streamlit==1.42.2
+streamlit-extras==0.5.5
+pandas==2.2.3
+datetime
+io
+re
