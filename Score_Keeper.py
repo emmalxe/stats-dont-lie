@@ -10,6 +10,9 @@ import re
 # add remarks button for certain timestamps. 
 # add an undo button --> to undo logs but also undo the button colour changes 
 
+st.set_page_config(page_title="Stats Dont Lie", page_icon="📊")
+
+
 st.title("Stats Dont Lie!☝🏻")
 with st.expander("Instructions"):
     st.write("1. **Enter Team & Player Names** - You can add or remove players at any time without affecting previously saved logs.")
