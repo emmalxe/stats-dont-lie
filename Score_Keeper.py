@@ -5,10 +5,12 @@ import datetime as dt
 from io import BytesIO
 import re
 
-# To Do 2: 
+# To Do: 
 # can upload your intermediate logs and continue from there? 
 # add remarks button for certain timestamps. 
 # add an undo button --> to undo logs but also undo the button colour changes 
+# Split up pages 
+# clean up code
 
 st.set_page_config(page_title="Stats Dont Lie", page_icon="📊")
 
