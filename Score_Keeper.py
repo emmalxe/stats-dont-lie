@@ -7,13 +7,11 @@ import re
 
 # To Do: 
 # can upload your intermediate logs and continue from there? 
-# add remarks button for certain timestamps. 
+# fix comments bug
 # add an undo button --> to undo logs but also undo the button colour changes 
-# Split up pages 
 # clean up code
 
 st.set_page_config(page_title="Stats Dont Lie", page_icon="📊")
-
 
 st.title("Stats Dont Lie!☝🏻")
 with st.expander("Instructions"):
@@ -39,9 +37,9 @@ if "home_team" not in st.session_state:
     st.session_state.home_team = ""
 if "away_team" not in st.session_state:
     st.session_state.away_team = ""
-if "home_players" not in st.session_state:
+if "home_players" not in st.session_state: #players that are alive 
     st.session_state.home_players = []
-if "away_players" not in st.session_state:
+if "away_players" not in st.session_state: #players that are dead
     st.session_state.away_players = []
 if "logs" not in st.session_state:
     st.session_state.logs = []
@@ -59,6 +57,8 @@ if "log_df" not in st.session_state:
     st.session_state.log_df = pd.DataFrame()
 if "score_time_df" not in st.session_state: 
     st.session_state.score_time_df = pd.DataFrame()
+if "comments" not in st.session_state:
+    st.session_state.comments = ""
 
 #initialise queues to keep track of who is dead 
 if "home_dead" not in st.session_state: 
@@ -173,12 +173,9 @@ with col1:
     st.session_state.set_number = selected_set
 with col2: 
     # Time selection
-    # cola,colb,colc = st.columns(3) 
-    # hour = cola.number_input("Hour", min_value=0, max_value=23, value=0, step=1)
-    # minute = colb.number_input("Minute", min_value=0, max_value=59, value=0, step=1)
-    # second = colc.number_input("Second", min_value=0, max_value=59, value=0, step=1)
     time_input = st.text_input("Enter Time (HH:MM:SS)", placeholder="00:00:00")
     time_pattern = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$")
+
 
 # Save timestamp when button is clicked
 with stylable_container(
@@ -191,9 +188,6 @@ with stylable_container(
     ):
     if st.button("Save"):
         # Convert selected time to a timestamp
-        # selected_time = dt.datetime.now().replace(hour=hour, minute=minute, second=second, microsecond=0)
-        # st.session_state.set_start_times[selected_set] = int(selected_time.timestamp())  # Convert to Unix timestamp
-        # st.success(f"Saved start time for Set {selected_set} at {selected_time.strftime('%H:%M:%S')}")
         if time_pattern.match(time_input):
             h, m, s = map(int, time_input.split(":"))
             selected_time = dt.datetime.now().replace(hour=h, minute=m, second=s, microsecond=0)
@@ -202,13 +196,11 @@ with stylable_container(
             
         else: 
             st.error("Invalid time format! Please enter in HH:MM:SS format.")
-            
-        
 
 st.subheader(f"Event Logging for Set {st.session_state.set_number}")
  
     
-# event logs buttons
+# Event logs buttons
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -350,135 +342,144 @@ with col3:
                         st.session_state.affected_player = player
                         
         st.write(f"**Affected Player:** {st.session_state.get('affected_player', 'None')}")
-
-# Log Event
-with stylable_container(
-    "log_event",
-    css_styles="""
-    button {
-        background-color: #000000;  
-        color: white;
-    }""",
-    ):
-    if st.button("Log Event"):
-        if (
-            st.session_state.selected_player
-            and st.session_state.selected_action
-        ):
-            # Determine team of selected player
-            if st.session_state.selected_player in st.session_state.home_players:
-                player_team = st.session_state.home_team
-            elif st.session_state.selected_player in st.session_state.away_players:
-                player_team = st.session_state.away_team
-            else:
-                player_team = "Unknown"
-
-            # Handle "Step Line" action - leave affected player blank
-            affected_player = st.session_state.get("affected_player") if st.session_state.selected_action != "Step Line" else ""
-
-            # Determine team of affected player (if applicable)
-            if affected_player in st.session_state.home_players:
-                affected_team = st.session_state.home_team
-            elif affected_player in st.session_state.away_players:
-                affected_team = st.session_state.away_team
-            else:
-                affected_team = "Unknown"
-
-
-            # Create event dictionary with team information
-            event = {
-                "set_number": st.session_state.set_number,
-                "player": st.session_state.selected_player,
-                "team": player_team,  # Track player's team
-                "action": st.session_state.selected_action,
-                "affected_player": affected_player,
-                "affected_team": affected_team  # Track affected player's team
-            }
-            
-            # Handle errors: 
-            if event["team"] == event["affected_team"]: 
-                st.error("You have selected players from the same team! Impossible!")
-            
-            elif (event["player"] in dead_players) or (event["affected_player"] in dead_players): 
-                st.error("The player you have selected is already dead! Try again!")
-            
-            else:
-                st.session_state.logs.append(event)
-                st.session_state.success_message = f"Logged: {event['player']} ({event['team']}) {event['action'].lower()} {event['affected_player']} ({event['affected_team']})"
-                if event["action"] == "Kill":
-                    if event["affected_team"] in st.session_state.home_team:
-                        # Remove affected player from the home_alive list
-                        st.session_state.home_players.remove(event["affected_player"])
-                        # Add affected player to the home_dead list
-                        st.session_state.home_dead.append(event["affected_player"])
-                    elif event["affected_team"] in st.session_state.away_team:
-                        # Remove affected player from the home_alive list
-                        st.session_state.away_players.remove(event["affected_player"])
-                        # Add affected player to the home_dead list
-                        st.session_state.away_dead.append(event["affected_player"])
-                
-                elif event["action"] == "Catch":
-                    if event["affected_team"] in st.session_state.home_team:
-                        # Remove affected player from the home_alive list
-                        st.session_state.home_players.remove(event["affected_player"])
-                        # Add affected player to the home_dead list
-                        st.session_state.home_dead.append(event["affected_player"])
-                        
-                        #revive player from away
-                        if  st.session_state.away_dead != []: 
-                            revive = st.session_state.away_dead.pop(0)
-                            # Add the player to away_alive
-                            st.session_state.away_players.append(revive)
-                        
-                    elif event["affected_team"] in st.session_state.away_team:
-                        # Remove affected player from the home_alive list
-                        st.session_state.away_players.remove(event["affected_player"])
-                        # Add affected player to the home_dead list
-                        st.session_state.away_dead.append(event["affected_player"])
-                        
-                        #revive player from home
-                        if  st.session_state.home_dead != []: 
-                            revive = st.session_state.home_dead.pop(0)
-                            # Add the player to home_alive
-                            st.session_state.home_players.append(revive)
-                            
-                else: #if step line 
-                    if event["team"] in st.session_state.home_team:
-                        # Remove affected player from the home_alive list
-                        st.session_state.home_players.remove(event["player"])
-                        # Add affected player to the home_dead list
-                        st.session_state.home_dead.append(event["player"])
-                    else: 
-                        # Remove affected player from the home_alive list
-                        st.session_state.away_players.remove(event["player"])
-                        # Add affected player to the home_dead list
-                        st.session_state.away_dead.append(event["player"])
-                st.rerun()     
-  
         
+# add comments: 
+comments = st.text_area("Enter comments about this event:", value=st.session_state.comments)
+
+column1, column2, column3 = st.columns([1,1,4])
+# Log Event
+with column1:
+    with stylable_container(
+        "log_event",
+        css_styles="""
+        button {
+            background-color: #000000;  
+            color: white;
+        }""",
+        ):
+        if st.button("Log Event"):
+            if (
+                st.session_state.selected_player
+                and st.session_state.selected_action
+            ):
+                # Determine team of selected player
+                if st.session_state.selected_player in st.session_state.home_players:
+                    player_team = st.session_state.home_team
+                elif st.session_state.selected_player in st.session_state.away_players:
+                    player_team = st.session_state.away_team
+                else:
+                    player_team = ""
+
+                # Handle "Step Line" action - leave affected player blank
+                affected_player = st.session_state.get("affected_player") if st.session_state.selected_action != "Step Line" else ""
+
+                # Determine team of affected player (if applicable)
+                if affected_player in st.session_state.home_players:
+                    affected_team = st.session_state.home_team
+                elif affected_player in st.session_state.away_players:
+                    affected_team = st.session_state.away_team
+                else:
+                    affected_team = ""
+
+
+                # Create event dictionary with team information
+                event = {
+                    "set_number": st.session_state.set_number,
+                    "player": st.session_state.selected_player,
+                    "team": player_team,  # Track player's team
+                    "action": st.session_state.selected_action,
+                    "affected_player": affected_player,
+                    "affected_team": affected_team,  # Track affected player's team
+                    "comment": comments
+                }
+                
+                
+                # Handle errors: 
+                if event["team"] == event["affected_team"]: 
+                    st.error("You have selected players from the same team! Impossible!")
+                
+                elif (event["player"] in dead_players) or (event["affected_player"] in dead_players): 
+                    st.error("The player you have selected is already dead! Try again!")
+                
+                else:
+                    st.session_state.comments = ""   
+                    st.session_state.logs.append(event)
+                    st.session_state.success_message = f"Logged: {event['player']} ({event['team']}) {event['action'].lower()} {event['affected_player']} ({event['affected_team']})"
+                    if event["action"] == "Kill":
+                        if event["affected_team"] in st.session_state.home_team:
+                            # Remove affected player from the home_alive list
+                            st.session_state.home_players.remove(event["affected_player"])
+                            # Add affected player to the home_dead list
+                            st.session_state.home_dead.append(event["affected_player"])
+                        elif event["affected_team"] in st.session_state.away_team:
+                            # Remove affected player from the home_alive list
+                            st.session_state.away_players.remove(event["affected_player"])
+                            # Add affected player to the home_dead list
+                            st.session_state.away_dead.append(event["affected_player"])
+                    
+                    elif event["action"] == "Catch":
+                        if event["affected_team"] in st.session_state.home_team:
+                            # Remove affected player from the home_alive list
+                            st.session_state.home_players.remove(event["affected_player"])
+                            # Add affected player to the home_dead list
+                            st.session_state.home_dead.append(event["affected_player"])
+                            
+                            #revive player from away
+                            if  st.session_state.away_dead != []: 
+                                revive = st.session_state.away_dead.pop(0)
+                                # Add the player to away_alive
+                                st.session_state.away_players.append(revive)
+                            
+                        elif event["affected_team"] in st.session_state.away_team:
+                            # Remove affected player from the home_alive list
+                            st.session_state.away_players.remove(event["affected_player"])
+                            # Add affected player to the home_dead list
+                            st.session_state.away_dead.append(event["affected_player"])
+                            
+                            #revive player from home
+                            if  st.session_state.home_dead != []: 
+                                revive = st.session_state.home_dead.pop(0)
+                                # Add the player to home_alive
+                                st.session_state.home_players.append(revive)
+                                
+                    else: #if step line 
+                        if event["team"] in st.session_state.home_team:
+                            # Remove affected player from the home_alive list
+                            st.session_state.home_players.remove(event["player"])
+                            # Add affected player to the home_dead list
+                            st.session_state.home_dead.append(event["player"])
+                        else: 
+                            # Remove affected player from the home_alive list
+                            st.session_state.away_players.remove(event["player"])
+                            # Add affected player to the home_dead list
+                            st.session_state.away_dead.append(event["player"])
+                    st.session_state.comments = ""   
+                    st.rerun()  
+    
+# Reset button  
+with column2: 
+    with stylable_container(
+        "reset",
+        css_styles="""
+        button {
+            background-color: #E6E6FA;  
+            color: black;
+        }""",
+        ):
+        if st.button("Reset"): 
+            for player in st.session_state.home_dead: 
+                st.session_state.home_players.append(player)
+            st.session_state.home_dead = []
+            
+            for player in st.session_state.away_dead: 
+                st.session_state.away_players.append(player)
+            st.session_state.away_dead = []
+            st.rerun()
+            
 # Display success message after rerun
 if st.session_state.success_message:
     st.success(st.session_state.success_message)
     st.session_state.success_message = ""  # Clear message after displaying       
-    
-with stylable_container(
-    "reset",
-    css_styles="""
-    button {
-        background-color: #E6E6FA;  
-        color: black;
-    }""",
-    ):
-    if st.button("Reset"): 
-        for player in st.session_state.home_dead: 
-            st.session_state.home_players.append(player)
-        st.session_state.home_dead = []
-        
-        for player in st.session_state.away_dead: 
-            st.session_state.away_players.append(player)
-        st.session_state.away_dead = []
-        st.rerun()
-
             
 
 # Score keeper 
