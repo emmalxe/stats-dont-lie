@@ -8,59 +8,74 @@ from io import BytesIO
 #To Do
 # Stats Visualisation? 
 
+st.set_page_config(page_title="Generate Player Stats", page_icon="🧐")
+
 st.title("Generate Player Stats! 🧐")
-
-# # File uploader allows only Excel files
-if not st.session_state.log_df.empty and not st.session_state.score_time_df.empty:
-    logs_df = st.session_state.log_df
-    score_df = st.session_state.score_time_df
-
 uploaded_file = st.file_uploader("Upload Game Logs Excel", type=["xlsx", "xls"])
+
 
 if uploaded_file is not None:
     # Load the Excel file
     xls = pd.ExcelFile(uploaded_file)
-    
+
     # Get sheet names
     sheet_names = xls.sheet_names
     #st.write("Sheets found:", sheet_names)
-    expected = ["Logs", "Score Keeper"]
+    expected = ["Logs", "Score Keeper", "Players"]
     if sheet_names == expected: 
-        
+
         # Read the selected sheet into a dataframe
-        logs_df = pd.read_excel(xls, sheet_name=sheet_names[0])
-        st.session_state.log_df = logs_df
-        score_df = pd.read_excel(xls, sheet_name=sheet_names[1])
-        st.session_state.score_time_df = score_df
+        logs_df_uploaded = pd.read_excel(xls, sheet_name=sheet_names[0])
+        st.session_state.log_df = logs_df_uploaded
+        score_df_uploaded = pd.read_excel(xls, sheet_name=sheet_names[1])
+        st.session_state.score_time_df = score_df_uploaded
+        players_df_uploaded = pd.read_excel(xls, sheet_name=sheet_names[2])
+        st.session_state.line_up_df = players_df_uploaded
         st.success("Game Logs successfully uploaded!")
     else: 
         st.error("Incorrect Excel Format")
-    
-    
-    
-if not st.session_state.log_df.empty: 
-    stats = {}   
-    # first_team = logs_df.iloc[0]["team"]
-    # second_team = logs_df.iloc[0]["affected_team"]
-    
-    #Helper Function to update stats 
-    def update_stats(player, team, action_type):
-        """Helper function to update player statistics"""
-        if player not in stats:
-            stats[player] = {"team": team,  "kill": 0, "catch": 0, "death": 0, "caught_out": 0, "sets_played": set(), "player_value": 0, "avg_player_value": 0}
 
-        if action_type == "kill":
-            stats[player]["kill"] += 1
-        elif action_type == "catch":
-            stats[player]["catch"] += 1
-        elif action_type == "caught_out":
-            stats[player]["caught_out"] += 1
-        elif action_type == "death":
-            stats[player]["death"] += 1
+
+#Helper Function to update stats 
+def update_stats(player, team, action_type):
+    """Helper function to update player statistics"""
+    # if player not in stats:
+    #     stats[player] = {"team": team,  "kill": 0, "catch": 0, "death": 0, "caught_out": 0}
+
+    if action_type == "kill":
+        stats[player]["kill"] += 1
+        stats[player]["throws"] +=1
+    elif action_type == "catch":
+        stats[player]["catch"] += 1
+        stats[player]["thrown_at"] += 1
+    elif action_type == "caught_out":
+        stats[player]["caught_out"] += 1
+        stats[player]["throws"] += 1
+    elif action_type == "death":
+        stats[player]["death"] += 1  
+    elif action_type == "killed":
+        stats[player]["death"] += 1
+        stats[player]["thrown_at"] += 1 
+    elif action_type == "throw":
+        stats[player]["throws"] += 1
+    elif action_type == "thrown_at":
+        stats[player]["thrown_at"] += 1
+      
             
-            
+if st.button("Get Player Stats"): 
+    stats = {}    
     
-    for _, row in logs_df.iterrows():
+    #initialise players
+    for _, row in st.session_state.line_up_df.iterrows():
+        player = row["player"]
+        team = row["team"]
+        sets_played = row["sets_played"]
+        number_of_sets_played = row["number_of_sets_played"]
+        if player not in stats:
+            stats[player] = {"team": team, "catch": 0, "kill": 0, "caught_out": 0, "death": 0, "throws":0, "thrown_at": 0, "kill_rate": 0, "sets_played": sets_played, "number_of_sets_played": number_of_sets_played  }
+    
+    #count stats for each player    
+    for _, row in st.session_state.log_df.iterrows():
         set_number = row["set_number"]
         player = row["player"]
         team = row["team"]
@@ -68,35 +83,30 @@ if not st.session_state.log_df.empty:
         affected_player = row["affected_player"]
         affected_team = row["affected_team"]
         
-        # Ensure players are initialized in stats
-        if player not in stats:
-            stats[player] = {"team": team, "catch": 0, "kill": 0, "caught_out": 0, "death": 0, "sets_played": set(), "player_value": 0, "avg_player_value": 0}
-        if affected_player not in stats:
-            stats[affected_player] = {"team": affected_team, "catch": 0, "kill": 0, "caught_out": 0, "death": 0, "sets_played": set(), "player_value": 0, "avg_player_value": 0}
-
-
-        # Track sets played
-        stats[player]["sets_played"].add(set_number)
-        stats[affected_player]["sets_played"].add(set_number)
-        
         # Update stats based on action
         if action == "kill":
             update_stats(player, team, "kill")
-            update_stats(affected_player, affected_team, "death")
+            update_stats(affected_player, affected_team, "killed")
         elif action == "catch":
             update_stats(player, team, "catch")
             update_stats(affected_player, affected_team, "caught_out")
         elif action == "step line": 
             update_stats(player, team, "death")
+        elif action == "throw/miss": 
+            update_stats(player, team, "throw")
+            update_stats(affected_player, affected_team, "thrown_at")
             
-        
-    # Convert sets played to count
-    for player in stats:
-        stats[player]["sets_played"] = len(stats[player]["sets_played"])
-    
+
     # Formatting  
     stats_df = pd.DataFrame.from_dict(stats, orient="index").reset_index()
     stats_df.rename(columns={"index": "player"}, inplace=True)
+    
+    # Add effectiveness column
+    stats_df["kill_rate"] = (
+        stats_df["kill"]/stats_df["throws"]
+    )
+    
+    stats_df["kill_rate"] = stats_df["kill_rate"].fillna(0)
     
     # Add player_value column
     stats_df["player_value"] = (
@@ -104,11 +114,13 @@ if not st.session_state.log_df.empty:
     )
 
     # Add avg_player_value column (avoid division by zero)
-    stats_df["avg_player_value"] = stats_df["player_value"] / stats_df["sets_played"]
+    stats_df["avg_player_value"] = stats_df["player_value"] / stats_df["number_of_sets_played"]
     stats_df["avg_player_value"] = stats_df["avg_player_value"].fillna(0)  # Replace NaN with 0
-
-    home_team = score_df.columns[2]
-    away_team = score_df.columns[3]
+    
+    
+    home_team = st.session_state.score_time_df.columns[2]
+    away_team = st.session_state.score_time_df.columns[3]
+    
     # Separate DataFrames for each team
     team_1_df = stats_df[stats_df["team"] == home_team]
     team_2_df = stats_df[stats_df["team"] == away_team]
@@ -124,9 +136,10 @@ if not st.session_state.log_df.empty:
     st.write(f"#### **{away_team} player stats**")
     st.dataframe(team_2_df, hide_index = True)
     
+    
     # Extract the home and away score from the last row
-    home_score = score_df.iloc[-1][home_team]
-    away_score = score_df.iloc[-1][away_team]
+    home_score = st.session_state.score_time_df.iloc[-1][home_team]
+    away_score = st.session_state.score_time_df.iloc[-1][away_team]
 
     # Print the final score
     final_score = f"Final Score : {home_score}:{away_score}"
