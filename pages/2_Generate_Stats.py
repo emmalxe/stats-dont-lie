@@ -59,7 +59,8 @@ def update_stats(player, team, action_type):
     elif action_type == "throw":
         stats[player]["throws"] += 1
     elif action_type == "thrown_at":
-        stats[player]["thrown_at"] += 1
+        stats[player]["thrown_at"] += 1 
+        
       
             
 if st.button("Get Player Stats"): 
@@ -82,19 +83,28 @@ if st.button("Get Player Stats"):
         action = row["action"].lower()
         affected_player = row["affected_player"]
         affected_team = row["affected_team"]
+        deflection = row["deflection"]
         
         # Update stats based on action
         if action == "kill":
             update_stats(player, team, "kill")
             update_stats(affected_player, affected_team, "killed")
+            if deflection == True: 
+                stats[player]["throws"] -=1
+                stats[affected_player]["thrown_at"] -= 1 
         elif action == "catch":
             update_stats(player, team, "catch")
             update_stats(affected_player, affected_team, "caught_out")
+            if deflection == True: 
+                stats[affected_player]["throws"] -=1
+                stats[player]["thrown_at"] -= 1 
         elif action == "step line": 
             update_stats(player, team, "death")
         elif action == "throw/miss": 
             update_stats(player, team, "throw")
             update_stats(affected_player, affected_team, "thrown_at")
+            
+        
             
 
     # Formatting  

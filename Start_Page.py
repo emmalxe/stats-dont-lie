@@ -8,6 +8,15 @@ import re
 # Page Config
 st.set_page_config(page_title="Start Page", page_icon="📊")
 st.title("Input Team Information")
+with st.expander("Instructions"):
+    st.write("1. **Enter Team Information** - Enter Team names, and all players available. Select players playing in current set.")
+    st.write("2. **Log Set Details** - For each set, record start time. If you need to update the start time, simply save a new timestamp to override the previous one.")
+    st.write("3. **Log Events** - Record key events in each set. To delete a log entry, scroll to the bottom and remove the corresponding row.")
+    st.write("4. **Update Scores** - Adjust the cumulative score at the end of each set. If you need to update the score , simply save a new score to override the previous one.")
+    st.write("5. **Start Next Set** - Return to start page, change set number and select the players playing in the next set.")
+    st.write("6. **Export & Finalize** - Download your logs as an Excel file, make manual edits if needed, and upload the finalized file on the 'Generate Stats' page to generate player statistics.")
+    st.warning("⚠️ Important: If you refresh the page, unsaved data will be lost! Be sure to download your logs! ")
+    
 
 # Initialize session state for teams, players, and logs
 if "home_team" not in st.session_state:
@@ -95,7 +104,7 @@ st.session_state.set_number = selected_set
 column4, column5 = st.columns(2) 
 with column4:
      # Select 6 people line up from all players
-    st.write(f"#### Select {st.session_state.home_team} Line-Up for Set {st.session_state.set_number}:")
+    st.write(f"#### Select {st.session_state.home_team} Line-Up for :blue[_Set {st.session_state.set_number}_]:")
     home_checkbox_states = {}
     for player in st.session_state.home_players:
         # Check if the player is already in the current lineup
@@ -122,7 +131,7 @@ with column4:
 
 with column5:
     # Select 6 people line up from all players
-    st.write(f"#### Select {st.session_state.away_team} Line-Up for Set {st.session_state.set_number}:")
+    st.write(f"#### Select {st.session_state.away_team} Line-Up for :blue[_Set {st.session_state.set_number}_]:")
     away_checkbox_states = {}
     for player in st.session_state.away_players:
         # Check if the player is already in the current lineup
@@ -147,46 +156,53 @@ with column5:
     else:
         st.write("No players selected.")
 
-if st.button("Save Line-Up"):
-    # st.session_state.home_line_up_dict[st.session_state.set_number] = st.session_state.current_home_line_up
-    # st.session_state.away_line_up_dict[st.session_state.set_number] = st.session_state.current_away_line_up
-    # st.write(st.session_state.home_line_up_dict)
-    # st.write(st.session_state.away_line_up_dict)
-    # Store line-ups in a single dictionary
-    st.session_state.line_up_dict[st.session_state.set_number] = {
-        f"{st.session_state.home_team}": st.session_state.current_home_line_up,
-        f"{st.session_state.away_team}": st.session_state.current_away_line_up
-    }
-    # Initialize a dictionary to track player participation
-    player_sets = {}
-    # Iterate through line_up_dict to populate player_sets
-    for set_number, teams in st.session_state.line_up_dict.items():
-        for team, players in teams.items():
-            for player in players:
-                if player not in player_sets:
-                    player_sets[player] = {
-                        "team": team,
-                        "sets_played": [],
-                        "number_of_sets_played": 0
-                    }
-                # Add the set number to the list of sets the player played
-                player_sets[player]["sets_played"].append(set_number)
-                player_sets[player]["number_of_sets_played"] += 1
 
-    # Convert to DataFrame
-    player_data = []
-    for player, data in player_sets.items():
-        player_data.append([player, data["team"], data["sets_played"], data["number_of_sets_played"]])
-    df = pd.DataFrame(player_data, columns=["player", "team","sets_played", "number_of_sets_played"])
-    st.session_state.line_up_df = df
-    st.dataframe(st.session_state.line_up_df)
-    
-    
+with stylable_container(
+    "log_event",
+    css_styles="""
+    button {
+        background-color: #000000;  
+        color: white;
+    }""",
+    ):
+    if st.button("Save Line-Up"):
+        st.page_link("pages/1_Score_Keeper.py", label="Click here to go to Next page", icon= "⏭️")
+        # Store line-ups in a single dictionary
+        st.session_state.line_up_dict[st.session_state.set_number] = {
+            f"{st.session_state.home_team}": st.session_state.current_home_line_up,
+            f"{st.session_state.away_team}": st.session_state.current_away_line_up
+        }
+        # Initialize a dictionary to track player participation
+        player_sets = {}
+        # Iterate through line_up_dict to populate player_sets
+        for set_number, teams in st.session_state.line_up_dict.items():
+            for team, players in teams.items():
+                for player in players:
+                    if player not in player_sets:
+                        player_sets[player] = {
+                            "team": team,
+                            "sets_played": [],
+                            "number_of_sets_played": 0
+                        }
+                    # Add the set number to the list of sets the player played
+                    player_sets[player]["sets_played"].append(set_number)
+                    player_sets[player]["number_of_sets_played"] += 1
+
+        # Convert to DataFrame
+        player_data = []
+        for player, data in player_sets.items():
+            player_data.append([player, data["team"], data["sets_played"], data["number_of_sets_played"]])
+        df = pd.DataFrame(player_data, columns=["player", "team","sets_played", "number_of_sets_played"])
+        st.session_state.line_up_df = df
+        st.dataframe(st.session_state.line_up_df)
+        
+        
+        
 
 
 
+                
             
-        
-        
-        
-        
+            
+            
+            

@@ -6,22 +6,17 @@ from io import BytesIO
 import re
 
 # To Do: 
-# can upload your intermediate logs and continue from there? 
-# add an undo button --> to undo logs but also undo the button colour changes 
-# Edit Instructions
-
+# can upload your intermediate logs and continue from there?
 
 st.set_page_config(page_title="Score Keeper", page_icon="💯")
 
-st.title("Stats Dont Lie!☝🏻")
-with st.expander("Instructions"):
-    st.write("1. **Enter Team & Player Names** - You can add or remove players at any time without affecting previously saved logs.")
-    st.write("2. **Log Set Details** - For each set, record the set number and start time. If you need to update the start time, simply save a new timestamp to override the previous one.")
-    st.write("3. **Log Events** - Record key events in each set. To delete a log entry, scroll to the bottom and remove the corresponding row.")
-    st.write("4. **Update Scores and Reset Button Colours** - Click the 'Reset' Button to reset the colours of the player buttons. Adjust the cumulative score at the end of each set. If you need to update the score , simply save a new score to override the previous one.")
-    st.write("5. **Export & Finalize** - Download your logs as an Excel file, make manual edits if needed, and upload the finalized file on the 'Generate Stats' page to generate player statistics.")
-    st.warning("⚠️ Important: If you rerun the page, unsaved data will be lost! Be sure to download your logs! ")
+st.title(f"What Happened in :blue[_Set {st.session_state.set_number}_]?")
+with st.expander("FYI"):
+    st.write("- Throw/Miss is a throw that does not result in a hit. (eg. miss, tanked)")
+    st.write("- Game logs can be undone, they can also be edited via the Game Logs table.")
+    st.write("- Deflection should only be used in secondary events, do not indicate deflection for the primary event. (eg.   A throws a ball, B tanked the ball up and that was caught by C -> log A throw/miss B (no deflection), C catch A (deflection))")
     
+
 st.markdown("""
     <style>
         .stButton > button {
@@ -103,8 +98,7 @@ with stylable_container(
         else: 
             st.error("Invalid time format! Please enter in HH:MM:SS format.")
 
-st.subheader(f"Event Logging for Set {st.session_state.set_number}")
-
+st.subheader(f"Event Logging")
 # Event logs buttons
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -198,6 +192,7 @@ with col3:
         st.write(f"**Affected Player:** {st.session_state.get('affected_player', 'None')}")
         
 # Add comments: 
+deflection = st.checkbox("This event is caused by a **DEFLECTION** (eg. kill by a tanked ball, second hit of a double kill)")
 comments = st.text_area("Enter comments about this event:", value=st.session_state.comments)
 
 
@@ -245,7 +240,8 @@ with column1:
                     "action": st.session_state.selected_action,
                     "affected_player": affected_player,
                     "affected_team": affected_team,  # Track affected player's team
-                    "comment": comments
+                    "comment": comments,
+                    "deflection": deflection
                 }
                 
                 # Handle errors: 
@@ -257,6 +253,18 @@ with column1:
                     st.session_state.success_message = f"Logged: {event['player']} ({event['team']}) {event['action'].lower()} {event['affected_player']} ({event['affected_team']})"
                     st.session_state.comments = ""   
                     st.rerun()  
+with column2:
+    with stylable_container(
+        "undo",
+        css_styles="""
+        button {
+            background-color:  #D3D3D3;
+            color: black;
+        }""",
+        ):
+        if st.button("Undo", icon="↩️", help="Remove last logged event"):
+            st.session_state.logs.pop()
+            st.session_state.success_message = "Deleted Last event"
     
 # Display success message after rerun
 if st.session_state.success_message:
@@ -264,7 +272,7 @@ if st.session_state.success_message:
     st.session_state.success_message = ""  # Clear message after displaying       
             
 # Score keeper 
-st.subheader(f"Cumulative Score as of Set {st.session_state.set_number}")
+st.subheader(f"Cumulative Score")
 cold, cole = st.columns(2)
 #selected_set_for_score = col.number_input("As of this set", min_value=1, max_value=20, value=1, step=1, key="selected_set_for_score")
 home_score = cold.number_input(f"{st.session_state.home_team}", min_value=0, max_value=20, value=0, step=1, key="home_score")
@@ -281,32 +289,18 @@ with stylable_container(
     if st.button("Save Score"):
         st.session_state.set_score[st.session_state.set_number] = (home_score, away_score)  
         st.success(f"Saved score for Set {st.session_state.set_number}! ")
-
-
+        st.page_link("Start_Page.py", label=" Click here to start next set", icon= "🏠")
 
 # Display Logs as Table
-st.subheader("Game Events")
+st.subheader("Game Logs")
 
 # Convert logs to a DataFrame
 if st.session_state.logs !=[]:
     log_df = pd.DataFrame(st.session_state.logs)
     st.session_state.log_df = log_df
     
-    if not log_df.empty:
-        for index, row in log_df.tail(5).iterrows():
-            col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1])
-            with col1:
-                st.write(row["set_number"])
-            with col2:
-                st.write(row["player"])
-            with col3:
-                st.write(row["action"])
-            with col4:
-                st.write(row["affected_player"])
-            with col5:
-                if st.button(f"Delete {index}", key=f"delete_{index}"):
-                    # Delete the row from the logs
-                    st.session_state.logs.pop(index)
+    st.data_editor(log_df.tail(5), hide_index=True)
+         
 
 # Display stored timestamps
 if st.session_state.set_start_times:
@@ -329,7 +323,7 @@ if st.session_state.set_start_times and st.session_state.set_score :
     start_time_stamp_df
     .merge(cscore_df, on="set_number", how="outer")
     )
-    st.dataframe(score_time_df, hide_index = True)
+    st.data_editor(score_time_df, hide_index = True)
     st.session_state.score_time_df = score_time_df
 
 player_df = st.session_state.line_up_df
