@@ -327,6 +327,7 @@ if st.session_state.set_start_times and st.session_state.set_score :
     st.session_state.score_time_df = score_time_df
 
 player_df = st.session_state.line_up_df
+player_df = player_df.sort_values(by='player')
 #Save Score and timestamp in csv format 
 if st.session_state.log_df is not None and st.session_state.score_time_df is not None:
     log_df = st.session_state.log_df 

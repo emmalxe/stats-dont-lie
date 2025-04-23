@@ -16,7 +16,7 @@ with st.expander("Instructions"):
     st.write("5. **Start Next Set** - Return to start page, change set number and select the players playing in the next set.")
     st.write("6. **Export & Finalize** - Download your logs as an Excel file, make manual edits if needed, and upload the finalized file on the 'Generate Stats' page to generate player statistics.")
     st.warning("⚠️ Important: If you refresh the page, unsaved data will be lost! Be sure to download your logs! ")
-    
+
 
 # Initialize session state for teams, players, and logs
 if "home_team" not in st.session_state:
@@ -34,7 +34,7 @@ if "current_away_line_up" not in st.session_state:
 if "set_number" not in st.session_state:
     st.session_state.set_number = 1  # Default set number to 1
 if "line_up_dict" not in st.session_state: 
-    st.session_state.line_up_dict = {}  
+    st.session_state.line_up_dict = {}
 if "line_up_df" not in st.session_state: 
     st.session_state.line_up_df = pd.DataFrame()
 
@@ -66,7 +66,7 @@ with col1:
             for player in player_list:
                 if (player not in st.session_state.home_players):
                     st.session_state.home_players.append(player) #all home players 
-                    
+
         # st.divider()
 
 
@@ -96,23 +96,19 @@ with col2:
             for player in player_list:
                 if (player not in st.session_state.away_players) :
                     st.session_state.away_players.append(player) #all away players
-       
+
 
 selected_set = st.number_input("**Current Set Number**", min_value=1, max_value=20, step=1, value=st.session_state.set_number )
 st.session_state.set_number = selected_set
 
-column4, column5 = st.columns(2) 
+column4, column5 = st.columns(2)
 with column4:
      # Select 6 people line up from all players
     st.write(f"#### Select {st.session_state.home_team} Line-Up for :blue[_Set {st.session_state.set_number}_]:")
     home_checkbox_states = {}
     for player in st.session_state.home_players:
         # Check if the player is already in the current lineup
-        if player in st.session_state.current_home_line_up:
-            is_checked = True
-        else:
-            is_checked = False
-
+        is_checked = player in st.session_state.current_home_line_up
         # Create a checkbox and store its state
         home_checkbox_states[player] = st.checkbox(player, value=is_checked)
 
@@ -135,11 +131,7 @@ with column5:
     away_checkbox_states = {}
     for player in st.session_state.away_players:
         # Check if the player is already in the current lineup
-        if player in st.session_state.current_away_line_up:
-            is_checked = True
-        else:
-            is_checked = False
-
+        is_checked = player in st.session_state.current_away_line_up
         # Create a checkbox and store its state
         away_checkbox_states[player] = st.checkbox(player, value=is_checked)
 
@@ -166,7 +158,6 @@ with stylable_container(
     }""",
     ):
     if st.button("Save Line-Up"):
-        st.page_link("pages/1_Score_Keeper.py", label="Click here to go to Next page", icon= "⏭️")
         # Store line-ups in a single dictionary
         st.session_state.line_up_dict[st.session_state.set_number] = {
             f"{st.session_state.home_team}": st.session_state.current_home_line_up,
@@ -195,6 +186,7 @@ with stylable_container(
         df = pd.DataFrame(player_data, columns=["player", "team","sets_played", "number_of_sets_played"])
         st.session_state.line_up_df = df
         st.dataframe(st.session_state.line_up_df)
+        st.page_link("pages/1_Score_Keeper.py", label="Click here to go to Next page", icon= "⏭️")
         
         
         
