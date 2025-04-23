@@ -326,8 +326,15 @@ if st.session_state.set_start_times and st.session_state.set_score :
     st.data_editor(score_time_df, hide_index = True)
     st.session_state.score_time_df = score_time_df
 
-player_df = st.session_state.line_up_df
-player_df = player_df.sort_values(by='player')
+if 'line_up_df' in st.session_state:
+    player_df = st.session_state.line_up_df
+    if 'player' in player_df.columns:
+        player_df = player_df.sort_values(by='player')
+    else:
+        st.warning("⚠️ 'player' column not found in the DataFrame.")
+else:
+    st.warning("⚠️ 'line_up_df' not found in session state.")
+
 #Save Score and timestamp in csv format 
 if st.session_state.log_df is not None and st.session_state.score_time_df is not None:
     log_df = st.session_state.log_df 
