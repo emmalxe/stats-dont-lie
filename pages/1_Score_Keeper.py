@@ -329,9 +329,9 @@ if 'line_up_df' in st.session_state:
     if 'player' in player_df.columns:
         player_df = player_df.sort_values(by='player')
     else:
-        st.warning("⚠️ 'No Logs Found!")
+        st.warning("⚠️ No Logs Found!")
 else:
-    st.warning("⚠️ 'No Logs Found")
+    st.warning("⚠️ No Logs Found")
 
 #Save Score and timestamp in csv format 
 if st.session_state.log_df is not None and st.session_state.score_time_df is not None:
