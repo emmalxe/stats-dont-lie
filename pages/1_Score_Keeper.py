@@ -67,12 +67,10 @@ if "comments" not in st.session_state:
     st.session_state.comments = ""
 if "success_message" not in st.session_state:
     st.session_state.success_message = ""
-    
-# if "home_left" not in st.session_state:
-#     st.session_state.home_left = len(st.session_state.current_home_line_up)
-# if "away_left" not in st.session_state:
-#     st.session_state.away_left = len(st.session_state.current_away_line_up)
+if "set_number" not in st.session_state:
+    st.session_state.set_number = 1 
 
+    
 # Time selection
 st.subheader("Start Time")
 time_input = st.text_input(f"Enter Start time of Set {st.session_state.set_number} (HH:MM:SS)", placeholder="00:00:00")
